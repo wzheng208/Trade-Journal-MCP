@@ -145,49 +145,6 @@ Identical inputs always produce identical outputs.
 
 ---
 
-## Project Structure
-
-Trade-Journal-MCP/
-│
-├─ packages/
-│ └─ shared/
-│ ├─ schemas.ts # Zod schemas (Trade, tool inputs/outputs)
-│ └─ index.ts # Public exports
-│
-├─ server/
-│ ├─ services/
-│ │ ├─ tradeCsvAdapter.ts # CSV → Trade normalization
-│ │ └─ datasetStore.ts # In-memory dataset store (singleton)
-│ │
-│ ├─ analytics/
-│ │ ├─ pnl.ts
-│ │ └─ tradeStats.ts
-│ │
-│ ├─ tools/
-│ │ ├─ loadTrades.ts
-│ │ ├─ datasetInfo.ts
-│ │ └─ pnlSummary.ts
-│ │
-│ └─ util/
-│
-├─ web/
-│ └─ src/app/
-│ ├─ api/
-│ │ ├─ trades/load
-│ │ └─ datasets/[datasetId]/
-│ │ ├─ info
-│ │ └─ pnl-summary
-│ │
-│ ├─ import/
-│ └─ dashboard/[datasetId]
-│
-└─ README.md
-
-yaml
-Copy code
-
----
-
 ## MCP Tools
 
 | Tool | Description |
@@ -205,9 +162,6 @@ The same logic powers both MCP tools and HTTP API routes.
 Id,ContractName,EnteredAt,ExitedAt,EntryPrice,ExitPrice,Size,Type,Fees,PnL
 1,NQ,2026-01-09T14:30:00Z,2026-01-09T14:42:00Z,16980.00,17005.50,1,Long,2.50,23.00
 2,ES,2026-01-10T15:05:00Z,2026-01-10T15:25:00Z,4818.00,4826.50,1,Long,2.25,6.25
-
-yaml
-Copy code
 
 ---
 
@@ -227,8 +181,7 @@ cd web
 npm run dev
 Then open:
 
-bash
-Copy code
+
 http://localhost:3000/import
 Limitations
 Dataset storage is in-memory only (resets on server restart)
