@@ -1,25 +1,8 @@
-import type { Trade } from '../domain/trades.js';
-import { minutesBetween, minDate, maxDate } from '../util/dates.js';
-import { percentile, round, safeSum } from '../util/numbers.js';
+import type { Trade } from '../domain/trades';
+import { minutesBetween, minDate, maxDate } from '../util/dates';
+import { percentile, round, safeSum } from '../util/numbers';
+import type { DatasetInfoStats } from '@trade/shared';
 
-export type DatasetInfoStats = {
-  symbolsCount: number;
-  symbolsSample: string[];
-  sideCounts: { LONG: number; SHORT: number };
-  totals: {
-    pnl: number;
-    fees: number;
-    netAfterFees: number;
-    openTrades: number;
-  };
-  durationsMinutes: {
-    count: number;
-    avg: number | null;
-    p50: number | null;
-    p90: number | null;
-    max: number | null;
-  };
-};
 
 function getValidDates(ds: Array<Date | undefined>): Date[] {
   return ds.filter(
@@ -29,14 +12,26 @@ function getValidDates(ds: Array<Date | undefined>): Date[] {
 
 function getDurationsMinutes(trades: Trade[]): number[] {
   const durations: number[] = [];
+
   for (const t of trades) {
-    if (t.enteredAt && t.exitedAt) {
-      const m = minutesBetween(t.enteredAt, t.exitedAt);
-      if (Number.isFinite(m) && m >= 0) durations.push(m);
+    if (!t.enteredAt || !t.exitedAt) continue;
+
+    const entered = new Date(t.enteredAt);
+    const exited = new Date(t.exitedAt);
+
+    if (Number.isNaN(entered.getTime()) || Number.isNaN(exited.getTime())) {
+      continue;
+    }
+
+    const m = minutesBetween(entered, exited);
+    if (Number.isFinite(m) && m >= 0) {
+      durations.push(m);
     }
   }
+
   return durations;
 }
+
 
 export function computeDatasetInfoStats(trades: Trade[]): DatasetInfoStats {
   const symbols = new Set(trades.map((t) => t.symbol).filter(Boolean));

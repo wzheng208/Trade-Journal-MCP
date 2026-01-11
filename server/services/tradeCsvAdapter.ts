@@ -1,28 +1,26 @@
-import type { Trade, Side } from '../domain/trades.js';
-import { toDate, toNumber } from '../util/parse.js';
+import type { Trade, Side } from '@trade/shared';
+import { toDate, toNumber } from '../util/parse';
 
 export type TradeCsvRow = {
   Id: string;
   ContractName: string;
   EnteredAt: string;
-  ExitedAt: string;
-  EntryPrice: string;
-  ExitPrice: string;
-  Fees: string;
-  PnL: string;
+  ExitedAt?: string;
+  EntryPrice?: string;
+  ExitPrice?: string;
+  Fees?: string;
+  PnL?: string;
   Size: string;
   Type: string;
-  TradeDay: string;
-  TradeDuration: string;
+  TradeDay?: string;
+  TradeDuration?: string;
   Commissions?: string;
 };
 
 function normalizeSide(raw: string | undefined): Side {
-
-  const v = (raw ?? '').trim().toUpperCase();
-  if (v === 'Long') return 'Long';
-  if (v === 'Short') return 'Short';
-
+  const v = (raw ?? '').trim().toLowerCase();
+  if (v === 'long') return 'Long';
+  if (v === 'short') return 'Short';
   return 'Long';
 }
 
@@ -31,13 +29,12 @@ export function rowToTrade(
   idx: number,
   warnings: string[],
 ): Trade {
-  
-  const enteredAt = toDate(r.EnteredAt);
-  if (!enteredAt)
+  const enteredAtDate = toDate(r.EnteredAt);
+  if (!enteredAtDate)
     warnings.push(`Row ${idx + 1}: invalid EnteredAt "${r.EnteredAt}"`);
 
-  const exitedAt = toDate(r.ExitedAt);
-  if (r.ExitedAt && !exitedAt)
+  const exitedAtDate = r.ExitedAt ? toDate(r.ExitedAt) : null;
+  if (r.ExitedAt && !exitedAtDate)
     warnings.push(`Row ${idx + 1}: invalid ExitedAt "${r.ExitedAt}"`);
 
   const qty = toNumber(r.Size);
@@ -46,6 +43,16 @@ export function rowToTrade(
   const symbol = (r.ContractName ?? '').trim();
   if (!symbol) warnings.push(`Row ${idx + 1}: missing ContractName`);
 
+  const enteredAtIso = enteredAtDate
+    ? enteredAtDate.toISOString()
+    : new Date(0).toISOString();
+
+  const exitedAtIso = exitedAtDate ? exitedAtDate.toISOString() : undefined;
+
+  const tradeDay =
+    (r.TradeDay ?? '').trim() ||
+    (enteredAtDate ? enteredAtIso.slice(0, 10) : undefined);
+
   return {
     id: (r.Id ?? '').trim() || String(idx + 1),
 
@@ -53,8 +60,9 @@ export function rowToTrade(
     side: normalizeSide(r.Type),
     qty: qty ?? 0,
 
-    enteredAt: enteredAt ?? new Date(0),
-    exitedAt: exitedAt ?? undefined,
+    // ✅ ISO strings (shared schema expects this)
+    enteredAt: enteredAtIso,
+    exitedAt: exitedAtIso,
 
     entryPrice: toNumber(r.EntryPrice),
     exitPrice: toNumber(r.ExitPrice),
@@ -62,7 +70,7 @@ export function rowToTrade(
     fees: toNumber(r.Fees),
     pnl: toNumber(r.PnL),
 
-    tradeDay: (r.TradeDay ?? '').trim() || undefined,
+    tradeDay,
     tradeDuration: (r.TradeDuration ?? '').trim() || undefined,
 
     commissions: toNumber(r.Commissions),

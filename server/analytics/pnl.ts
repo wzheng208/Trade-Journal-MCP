@@ -1,25 +1,10 @@
-import type { Trade } from '../domain/trades.js';
-import { round, safeNum } from '../util/numbers.js';
+import type { Trade } from '../domain/trades';
+import { round, safeNum } from '../util/numbers';
+import { PnlStats } from '@trade/shared';
 
 export type GroupByKey = 'symbol' | 'side' | 'tradeDay';
 
-export type PnlStats = {
-  count: number;
-  wins: number;
-  losses: number;
-  breakeven: number;
 
-  pnl: number;
-  fees: number;
-  netAfterFees: number;
-  avgPnl: number;
-
-  winRate: number; //percent
-  avgWin: number;
-  avgLoss: number;
-  expectancy: number;
-  profitFactor: number | null;
-};
 
 export function computePnlStats(trades: Trade[]): PnlStats {
   const pnls = trades.map((t) => safeNum(t.pnl));

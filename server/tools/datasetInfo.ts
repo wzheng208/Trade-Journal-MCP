@@ -1,20 +1,21 @@
 import { z } from 'zod';
-import { datasetStore } from '../services/datasetStore.js';
-import { computeDatasetInfoStats } from '../analytics/tradeStats.js';
+import { datasetStore } from '../services/datasetStore';
+import { computeDatasetInfoStats } from '../analytics/tradeStats';
 
-const inputSchema = z.object({
+export const datasetInfoInputSchema = z.object({
   datasetId: z.string().min(1),
 });
 
-export async function datasetInfoTool(args: unknown) {
-  
-  const { datasetId } = inputSchema.parse(args);
+export type DatasetInfoArgs = z.infer<typeof datasetInfoInputSchema>;
+
+export async function datasetInfoTool(args: DatasetInfoArgs) {
+  const { datasetId } = args;
 
   const dataset = datasetStore.get(datasetId);
   if (!dataset) {
     return {
       error: {
-        code: 'DATASET_NOT_FOUND',
+        code: 'DATASET_NOT_FOUND' as const,
         message: `No dataset found for datasetId="${datasetId}". Run load_trades first.`,
       },
     };
@@ -31,9 +32,7 @@ export async function datasetInfoTool(args: unknown) {
 
     symbolsCount: stats.symbolsCount,
     symbolsSample: stats.symbolsSample,
-
     sideCounts: stats.sideCounts,
-
     totals: stats.totals,
     durationsMinutes: stats.durationsMinutes,
   };

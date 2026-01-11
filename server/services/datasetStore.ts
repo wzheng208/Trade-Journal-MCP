@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Trade } from '../domain/trades.js';
+import type { Trade } from '../domain/trades';
 
 export type Dataset = {
   id: string;
