@@ -1,15 +1,18 @@
 import { z } from 'zod';
-import { datasetStore } from '../services/datasetStore';
-import { toDateOrNull } from '../util/dates';
-import { computePnlStats, groupTrades } from '../analytics/pnl';
+import { toDateOrNull } from '../../util/dates.js';
+import { computePnlStats, groupTrades } from '../../analytics/pnl.js';
 import {
   GroupByKeySchema,
   type GroupByKey,
   type PnlStats,
 } from '@trade/shared';
+import { getTradeImportById } from '../../repositories/tradeImportRepository.js';
+import { getTradesByImportId } from '../../repositories/tradeRepository.js';
+import { mapTradeRecordToTrade } from '../../domain/trades.js';
 
 export const pnlSummaryInputSchema = z.object({
   datasetId: z.string().min(1),
+  userId: z.string().uuid(),
   from: z.string().optional(),
   to: z.string().optional(),
   groupBy: GroupByKeySchema.optional(),
@@ -34,20 +37,24 @@ export type PnlSummaryResult =
 export async function pnlSummaryTool(
   args: PnlSummaryArgs,
 ): Promise<PnlSummaryResult> {
-  const dataset = datasetStore.get(args.datasetId);
-  if (!dataset) {
+  const input = pnlSummaryInputSchema.parse(args);
+
+  const tradeImport = await getTradeImportById(input.datasetId, input.userId);
+
+  if (!tradeImport) {
     return {
       error: {
         code: 'DATASET_NOT_FOUND',
-        message: `No dataset found for datasetId="${args.datasetId}". Run load_trades first.`,
+        message: `No dataset found for datasetId="${input.datasetId}". Run load_trades first.`,
       },
     };
   }
 
-  const fromD = toDateOrNull(args.from);
-  const toD = toDateOrNull(args.to);
+  const tradeRows = await getTradesByImportId(input.datasetId, input.userId);
+  let trades = tradeRows.map(mapTradeRecordToTrade);
 
-  let trades = dataset.trades;
+  const fromD = toDateOrNull(input.from);
+  const toD = toDateOrNull(input.to);
 
   if (fromD) trades = trades.filter((t) => t.enteredAt >= fromD);
   if (toD) trades = trades.filter((t) => t.enteredAt <= toD);
@@ -56,24 +63,24 @@ export async function pnlSummaryTool(
 
   let breakdown: PnlBreakdownRow[] | null = null;
 
-  if (args.groupBy) {
-    const groupBy: GroupByKey = args.groupBy;
+  if (input.groupBy) {
+    const groupBy: GroupByKey = input.groupBy;
     const grouped = groupTrades(trades, groupBy);
 
     breakdown = [...grouped.entries()]
-      .map(([key, groupTrades]) => ({
+      .map(([key, groupedTrades]) => ({
         key,
-        ...computePnlStats(groupTrades),
+        ...computePnlStats(groupedTrades),
       }))
       .sort(
         (a, b) =>
           b.pnl - a.pnl || b.count - a.count || a.key.localeCompare(b.key),
       )
-      .slice(0, args.topN ?? 15);
+      .slice(0, input.topN ?? 15);
   }
 
   return {
-    datasetId: dataset.id,
+    datasetId: tradeImport.id,
     filter: {
       from: fromD ? fromD.toISOString() : null,
       to: toD ? toD.toISOString() : null,

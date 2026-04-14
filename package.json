@@ -4,10 +4,14 @@
   "main": "index.js",
   "type": "module",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "tsx watch server/server.ts",
-    "start": "tsx server/server.ts",
+    "dev": "tsx watch server/app.ts",
+    "dev:mcp": "tsx watch server/mcpServer.ts",
+    "test:trade-flow": "tsx server/scripts/testTradeFlow.ts",
+    "test:import-flow": "tsx server/scripts/testImportFlow.ts",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier -w .",
@@ -19,6 +23,7 @@
   "description": "",
   "devDependencies": {
     "@types/node": "^25.0.3",
+    "@types/pg": "^8.20.0",
     "eslint": "^9.39.2",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0",
@@ -27,9 +32,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.1",
+    "@trade/shared": "workspace:*",
     "csv-parse": "^6.1.0",
-    "zod": "^4.2.1",
-    "@trade/shared": "workspace:*"
+    "dotenv": "^17.4.2",
+    "pg": "^8.20.0",
+    "zod": "^4.2.1"
   }
-  
 }
