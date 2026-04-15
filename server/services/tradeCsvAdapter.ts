@@ -1,17 +1,17 @@
 import type { Trade, Side } from '@trade/shared';
-import { toDate, toNumber } from 'server/util/parse.js';
+import { toDate, toNumber } from '../util/parse.js';
 
 export type TradeCsvRow = {
-  Id: string;
-  ContractName: string;
-  EnteredAt: string;
+  Id?: string;
+  ContractName?: string;
+  EnteredAt?: string;
   ExitedAt?: string;
   EntryPrice?: string;
   ExitPrice?: string;
   Fees?: string;
   PnL?: string;
-  Size: string;
-  Type: string;
+  Size?: string;
+  Type?: string;
   TradeDay?: string;
   TradeDuration?: string;
   Commissions?: string;
@@ -55,7 +55,7 @@ export function rowToTrade(r: TradeCsvRow, idx: number): RowToTradeResult {
   if (!enteredAtDate) {
     return {
       success: false,
-      errorMessage: `Row ${idx + 1}: invalid EnteredAt "${r.EnteredAt}"`,
+      errorMessage: `Row ${idx + 1}: invalid EnteredAt "${r.EnteredAt ?? ''}"`,
       rawData: r,
     };
   }
@@ -64,7 +64,7 @@ export function rowToTrade(r: TradeCsvRow, idx: number): RowToTradeResult {
   if (qty == null) {
     return {
       success: false,
-      errorMessage: `Row ${idx + 1}: invalid Size "${r.Size}"`,
+      errorMessage: `Row ${idx + 1}: invalid Size "${r.Size ?? ''}"`,
       rawData: r,
     };
   }
@@ -73,7 +73,7 @@ export function rowToTrade(r: TradeCsvRow, idx: number): RowToTradeResult {
   if (!side) {
     return {
       success: false,
-      errorMessage: `Row ${idx + 1}: invalid Type "${r.Type}"`,
+      errorMessage: `Row ${idx + 1}: invalid Type "${r.Type ?? ''}"`,
       rawData: r,
     };
   }
@@ -96,6 +96,42 @@ export function rowToTrade(r: TradeCsvRow, idx: number): RowToTradeResult {
     };
   }
 
+  const exitPrice = toNumber(r.ExitPrice);
+  if (r.ExitPrice && exitPrice == null) {
+    return {
+      success: false,
+      errorMessage: `Row ${idx + 1}: invalid ExitPrice "${r.ExitPrice}"`,
+      rawData: r,
+    };
+  }
+
+  const fees = toNumber(r.Fees);
+  if (r.Fees && fees == null) {
+    return {
+      success: false,
+      errorMessage: `Row ${idx + 1}: invalid Fees "${r.Fees}"`,
+      rawData: r,
+    };
+  }
+
+  const pnl = toNumber(r.PnL);
+  if (r.PnL && pnl == null) {
+    return {
+      success: false,
+      errorMessage: `Row ${idx + 1}: invalid PnL "${r.PnL}"`,
+      rawData: r,
+    };
+  }
+
+  const commissions = toNumber(r.Commissions);
+  if (r.Commissions && commissions == null) {
+    return {
+      success: false,
+      errorMessage: `Row ${idx + 1}: invalid Commissions "${r.Commissions}"`,
+      rawData: r,
+    };
+  }
+
   const tradeDay =
     (r.TradeDay ?? '').trim() || enteredAtDate.toISOString().slice(0, 10);
 
@@ -109,12 +145,12 @@ export function rowToTrade(r: TradeCsvRow, idx: number): RowToTradeResult {
       enteredAt: enteredAtDate.toISOString(),
       exitedAt: exitedAtDate ? exitedAtDate.toISOString() : undefined,
       entryPrice,
-      exitPrice: toNumber(r.ExitPrice) ?? undefined,
-      fees: toNumber(r.Fees) ?? undefined,
-      pnl: toNumber(r.PnL) ?? undefined,
+      exitPrice: exitPrice ?? undefined,
+      fees: fees ?? undefined,
+      pnl: pnl ?? undefined,
       tradeDay,
       tradeDuration: (r.TradeDuration ?? '').trim() || undefined,
-      commissions: toNumber(r.Commissions) ?? undefined,
+      commissions: commissions ?? undefined,
     },
   };
 }

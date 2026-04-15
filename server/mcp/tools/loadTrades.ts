@@ -67,23 +67,52 @@ export async function loadTradesTool(
     warnings.push(`Missing required column: ${col}`);
   }
 
-  const normalizedTrades = (records as TradeCsvRow[]).map((row, idx) =>
-    rowToTrade(row, idx),
-  );
+  // If required columns are missing, stop before row-level mapping/validation.
+  if (missing.length > 0) {
+    const tradeImport = await createTradeImport({
+      userId: input.userId,
+      fileName: input.path ? path.basename(input.path) : 'uploaded.csv',
+      source: 'csv',
+      columns,
+      warnings,
+    });
+
+    return {
+      datasetId: tradeImport.id,
+      rowCount: 0,
+      columns,
+      warnings,
+    };
+  }
 
   const trades: Trade[] = [];
 
-  normalizedTrades.forEach((trade, idx) => {
-    const parsed = TradeSchema.safeParse(trade);
+  (records as TradeCsvRow[]).forEach((row, idx) => {
+    try {
+      const mapped = rowToTrade(row, idx);
 
-    if (!parsed.success) {
+      if (!mapped.success) {
+        warnings.push(mapped.errorMessage);
+        return;
+      }
+
+      const parsed = TradeSchema.safeParse(mapped.trade);
+
+      if (!parsed.success) {
+        warnings.push(
+          `Row ${idx + 1}: invalid trade - ${summarizeZodError(parsed.error)}`,
+        );
+        return;
+      }
+
+      trades.push(parsed.data);
+    } catch (error) {
       warnings.push(
-        `Row ${idx + 1}: invalid trade - ${summarizeZodError(parsed.error)}`,
+        `Row ${idx + 1}: failed to map trade row - ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
       );
-      return;
     }
-
-    trades.push(parsed.data);
   });
 
   const tradeImport = await createTradeImport({

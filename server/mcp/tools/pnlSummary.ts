@@ -6,12 +6,10 @@ import {
   type GroupByKey,
   type PnlStats,
 } from '@trade/shared';
-import { getTradeImportById } from '../../repositories/tradeImportRepository.js';
-import { getTradesByImportId } from '../../repositories/tradeRepository.js';
+import { listTradesByUserId } from '../../repositories/tradeRepository.js';
 import { mapTradeRecordToTrade } from '../../domain/trades.js';
 
 export const pnlSummaryInputSchema = z.object({
-  datasetId: z.string().min(1),
   userId: z.string().uuid(),
   from: z.string().optional(),
   to: z.string().optional(),
@@ -23,34 +21,18 @@ export type PnlSummaryArgs = z.infer<typeof pnlSummaryInputSchema>;
 
 export type PnlBreakdownRow = { key: string } & PnlStats;
 
-export type PnlSummaryResult =
-  | {
-      error: { code: 'DATASET_NOT_FOUND'; message: string };
-    }
-  | {
-      datasetId: string;
-      filter: { from: string | null; to: string | null };
-      overall: PnlStats;
-      breakdown: PnlBreakdownRow[] | null;
-    };
+export type PnlSummaryResult = {
+  filter: { from: string | null; to: string | null };
+  overall: PnlStats;
+  breakdown: PnlBreakdownRow[] | null;
+};
 
 export async function pnlSummaryTool(
   args: PnlSummaryArgs,
 ): Promise<PnlSummaryResult> {
   const input = pnlSummaryInputSchema.parse(args);
 
-  const tradeImport = await getTradeImportById(input.datasetId, input.userId);
-
-  if (!tradeImport) {
-    return {
-      error: {
-        code: 'DATASET_NOT_FOUND',
-        message: `No dataset found for datasetId="${input.datasetId}". Run load_trades first.`,
-      },
-    };
-  }
-
-  const tradeRows = await getTradesByImportId(input.datasetId, input.userId);
+  const tradeRows = await listTradesByUserId(input.userId);
   let trades = tradeRows.map(mapTradeRecordToTrade);
 
   const fromD = toDateOrNull(input.from);
@@ -80,7 +62,6 @@ export async function pnlSummaryTool(
   }
 
   return {
-    datasetId: tradeImport.id,
     filter: {
       from: fromD ? fromD.toISOString() : null,
       to: toD ? toD.toISOString() : null,

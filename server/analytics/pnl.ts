@@ -1,5 +1,6 @@
 import { round, safeNum } from 'server/util/numbers.js';
-import type { PnlStats, Trade } from '@trade/shared';
+import type { PnlStats } from '@trade/shared';
+import type { Trade } from '../domain/trades.js';
 
 export type GroupByKey = 'symbol' | 'side' | 'tradeDay';
 

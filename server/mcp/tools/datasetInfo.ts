@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Trade } from '@trade/shared';
 import { computeDatasetInfoStats } from '../../analytics/tradeStats.js';
 import { getTradeImportById } from '../../repositories/tradeImportRepository.js';
-import { getTradesByImportId } from '../../repositories/tradeRepository.js';
+import { listTradesByUserId } from '../../repositories/tradeRepository.js';
 
 export const datasetInfoInputSchema = z.object({
   datasetId: z.string().min(1),
@@ -11,31 +11,53 @@ export const datasetInfoInputSchema = z.object({
 
 export type DatasetInfoArgs = z.infer<typeof datasetInfoInputSchema>;
 
+function toIsoStringOrUndefined(value: unknown): string | undefined {
+  if (value == null) return undefined;
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+  }
+
+  return undefined;
+}
+
 function mapTradeRecordToSharedTrade(row: {
   id: string;
   external_id: string | null;
   symbol: string;
   side: string;
   size: number;
-  entered_at: string;
-  exited_at: string | null;
+  entered_at: string | Date;
+  exited_at: string | Date | null;
   entry_price: string;
   exit_price: string | null;
   fees: string;
   pnl: string | null;
 }): Trade {
+  const enteredAt = toIsoStringOrUndefined(row.entered_at);
+  const exitedAt = toIsoStringOrUndefined(row.exited_at);
+
+  if (!enteredAt) {
+    throw new Error(`Trade row ${row.id} is missing a valid entered_at value`);
+  }
+
   return {
     id: row.external_id ?? row.id,
     symbol: row.symbol,
     side: row.side as 'Long' | 'Short',
     qty: row.size,
-    enteredAt: row.entered_at,
-    exitedAt: row.exited_at ?? undefined,
+    enteredAt,
+    exitedAt,
     entryPrice: Number(row.entry_price),
     exitPrice: row.exit_price !== null ? Number(row.exit_price) : undefined,
     fees: Number(row.fees),
     pnl: row.pnl !== null ? Number(row.pnl) : undefined,
-    tradeDay: row.entered_at ? row.entered_at.slice(0, 10) : undefined,
+    tradeDay: enteredAt.slice(0, 10),
   };
 }
 
@@ -53,7 +75,7 @@ export async function datasetInfoTool(args: DatasetInfoArgs) {
     };
   }
 
-  const tradeRows = await getTradesByImportId(datasetId, userId);
+  const tradeRows = await listTradesByUserId(userId);
   const trades = tradeRows.map(mapTradeRecordToSharedTrade);
 
   const stats = computeDatasetInfoStats(trades);
