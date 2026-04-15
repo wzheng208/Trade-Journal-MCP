@@ -1,11 +1,21 @@
 import express from 'express';
 import chatRouter from './routes/chat.js';
 import dotenv from 'dotenv';
+import cors from 'cors';
+
 dotenv.config({ path: './server/.env' });
 
 console.log('HTTP app not implemented yet');
 
+
 const app = express();
+
+app.use(
+  cors({
+    origin: 'http://localhost:8080',
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
