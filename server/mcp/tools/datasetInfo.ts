@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Trade } from '@trade/shared';
 import { computeDatasetInfoStats } from '../../analytics/tradeStats.js';
 import { getTradeImportById } from '../../repositories/tradeImportRepository.js';
-import { listTradesByUserId } from '../../repositories/tradeRepository.js';
+import { getTradesByImportId } from '../../repositories/tradeRepository.js';
 
 export const datasetInfoInputSchema = z.object({
   datasetId: z.string().min(1),
@@ -75,7 +75,7 @@ export async function datasetInfoTool(args: DatasetInfoArgs) {
     };
   }
 
-  const tradeRows = await listTradesByUserId(userId);
+  const tradeRows = await getTradesByImportId(datasetId, userId);
   const trades = tradeRows.map(mapTradeRecordToSharedTrade);
 
   const stats = computeDatasetInfoStats(trades);

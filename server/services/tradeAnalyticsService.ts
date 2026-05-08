@@ -1,7 +1,11 @@
 import { z } from 'zod';
-import type { Trade, PnlStats } from '@trade/shared';
+import type { PnlStats } from '@trade/shared';
+import type { Trade } from '../domain/trades.js';
 import { getTradeImportById } from '../repositories/tradeImportRepository.js';
-import { getTradesByImportId } from '../repositories/tradeRepository.js';
+import {
+  getTradesByImportId,
+  type TradeRecord,
+} from '../repositories/tradeRepository.js';
 import { toDateOrNull } from '../util/dates.js';
 import { computePnlStats, groupTrades } from '../analytics/pnl.js';
 
@@ -32,33 +36,21 @@ export type LargestWinLossRow = {
   exitedAt?: string;
 } | null;
 
-function mapTradeRecordToSharedTrade(row: {
-  external_id: string | null;
-  symbol: string;
-  side: string;
-  size: number;
-  entered_at: string;
-  exited_at: string | null;
-  entry_price: string;
-  exit_price: string | null;
-  fees: string;
-  pnl: string | null;
-}): Trade {
-  const enteredAt = row.entered_at;
-  const tradeDay = enteredAt ? enteredAt.slice(0, 10) : undefined;
-
+function mapTradeRecordToTrade(row: TradeRecord): Trade {
+  const enteredAt = new Date(row.entered_at);
+  const exitedAt = row.exited_at ? new Date(row.exited_at) : undefined;
   return {
-    id: row.external_id ?? '',
+    id: row.external_id ?? row.id,
     symbol: row.symbol,
     side: row.side as 'Long' | 'Short',
     qty: row.size,
     enteredAt,
-    exitedAt: row.exited_at ?? undefined,
+    exitedAt,
     entryPrice: Number(row.entry_price),
     exitPrice: row.exit_price !== null ? Number(row.exit_price) : undefined,
     fees: Number(row.fees),
     pnl: row.pnl !== null ? Number(row.pnl) : undefined,
-    tradeDay,
+    tradeDay: enteredAt.toISOString().slice(0, 10),
   };
 }
 
@@ -88,11 +80,11 @@ function filterTradesByDate(
   let filtered = trades;
 
   if (fromD) {
-    filtered = filtered.filter((t) => new Date(t.enteredAt) >= fromD);
+    filtered = filtered.filter((t) => t.enteredAt >= fromD);
   }
 
   if (toD) {
-    filtered = filtered.filter((t) => new Date(t.enteredAt) <= toD);
+    filtered = filtered.filter((t) => t.enteredAt <= toD);
   }
 
   return filtered;
@@ -104,8 +96,8 @@ function sortRows(rows: PerformanceRow[]): PerformanceRow[] {
   );
 }
 
-function getWeekdayName(enteredAt: string): string {
-  return new Date(enteredAt).toLocaleDateString('en-US', {
+function getWeekdayName(enteredAt: Date): string {
+  return enteredAt.toLocaleDateString('en-US', {
     weekday: 'long',
     timeZone: 'UTC',
   });
@@ -125,7 +117,7 @@ export async function getDatasetTrades(input: AnalyticsBaseInput): Promise<{
   }
 
   const tradeRows = await getTradesByImportId(parsed.datasetId, parsed.userId);
-  const trades = tradeRows.map(mapTradeRecordToSharedTrade);
+  const trades = tradeRows.map(mapTradeRecordToTrade);
 
   const { fromD, toD, filter } = getFilter(parsed);
 
@@ -262,8 +254,8 @@ export async function getLargestWinLoss(input: AnalyticsBaseInput): Promise<{
           symbol: largestWin.symbol,
           side: largestWin.side,
           pnl: largestWin.pnl ?? 0,
-          enteredAt: largestWin.enteredAt,
-          exitedAt: largestWin.exitedAt,
+          enteredAt: largestWin.enteredAt.toISOString(),
+          exitedAt: largestWin.exitedAt?.toISOString(),
         }
       : null,
     largestLoss: largestLoss
@@ -272,8 +264,8 @@ export async function getLargestWinLoss(input: AnalyticsBaseInput): Promise<{
           symbol: largestLoss.symbol,
           side: largestLoss.side,
           pnl: largestLoss.pnl ?? 0,
-          enteredAt: largestLoss.enteredAt,
-          exitedAt: largestLoss.exitedAt,
+          enteredAt: largestLoss.enteredAt.toISOString(),
+          exitedAt: largestLoss.exitedAt?.toISOString(),
         }
       : null,
   };

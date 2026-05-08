@@ -91,7 +91,9 @@ export async function insertTrades(trades: InsertTradeInput[]): Promise<void> {
   }
 }
 
-export async function listTradesByUserId(userId: string): Promise<TradeRecord[]> {
+export async function listTradesByUserId(
+  userId: string,
+): Promise<TradeRecord[]> {
   const result = await pool.query<TradeRecord>(
     `
       select *
@@ -100,6 +102,24 @@ export async function listTradesByUserId(userId: string): Promise<TradeRecord[]>
       order by entered_at asc
     `,
     [userId],
+  );
+
+  return result.rows;
+}
+
+export async function getTradesByImportId(
+  importId: string,
+  userId: string,
+): Promise<TradeRecord[]> {
+  const result = await pool.query<TradeRecord>(
+    `
+      select *
+      from public.trades
+      where import_id = $1
+        and user_id = $2
+      order by entered_at asc
+    `,
+    [importId, userId],
   );
 
   return result.rows;
