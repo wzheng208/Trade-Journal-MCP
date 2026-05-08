@@ -32,6 +32,75 @@ export type CsvImportResponse = {
   };
 };
 
+export type AnalyticsOverview = {
+  filter: {
+    monthFrom: string | null;
+    monthTo: string | null;
+    defaultedToMostRecentMonth: boolean;
+  };
+  availableMonths: Array<{
+    value: string;
+    label: string;
+  }>;
+  overall: {
+    count: number;
+    wins: number;
+    losses: number;
+    breakeven: number;
+    pnl: number;
+    fees: number;
+    netAfterFees: number;
+    avgPnl: number;
+    winRate: number;
+    avgWin: number;
+    avgLoss: number;
+    expectancy: number;
+    profitFactor: number | null;
+  };
+  equityCurve: Array<{
+    date: string;
+    pnl: number;
+    cumulativePnl: number;
+  }>;
+  calendar: Array<{
+    date: string;
+    pnl: number;
+    fees: number;
+    netAfterFees: number;
+    wins: number;
+    losses: number;
+    count: number;
+  }>;
+  monthly: Array<{
+    key: string;
+    label: string;
+    pnl: number;
+    count: number;
+  }>;
+  bySymbol: Array<{
+    key: string;
+    count: number;
+    pnl: number;
+    netAfterFees: number;
+    winRate: number;
+  }>;
+  bySide: Array<{
+    key: string;
+    count: number;
+    pnl: number;
+    netAfterFees: number;
+    winRate: number;
+  }>;
+  recentTrades: Array<{
+    rowId: string;
+    id: string;
+    symbol: string;
+    side: 'Long' | 'Short';
+    enteredAt: string;
+    pnl: number;
+  }>;
+};
+
 type ApiOptions = {
   token: string;
   path: string;

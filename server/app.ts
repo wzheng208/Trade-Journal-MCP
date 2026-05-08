@@ -1,4 +1,5 @@
 import express from 'express';
+import analyticsRouter from './routes/analytics.js';
 import chatRouter from './routes/chat.js';
 import importsRouter from './routes/imports.js';
 import dotenv from 'dotenv';
@@ -24,6 +25,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/chat', chatRouter);
 app.use('/api/imports', importsRouter);
+app.use('/api/analytics', analyticsRouter);
 
 const port = Number(process.env.PORT ?? 3001);
 
